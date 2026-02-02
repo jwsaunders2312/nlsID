@@ -4,15 +4,27 @@ function [tt, yy, resnorm, residual, elim_times, elim_freq] = ...
 % nlsID is a time-domain nonlinear system identification code. For the full
 % description, see Constantin et al (2022) doi.org/10.3390/app12157860
 % Copyright (c) 2022 Lucian Constantin, lucian.constantin@bristol.ac.uk
+% Input styles:
+% [tt, yy, resnorm, residual, elim_times, elim_freq] = nlsID(t,x,tend,1,tmeth,varargin)
+% [tt, yy, resnorm, residual, elim_times, elim_freq] = nlsID(t,x,tend,2,fin,tmeth,varargin)
+% Changes V1.1:
+%  - Frequencies can now be input by the user in the initial function call
+%  rather than using the GUI.
+%  - User can select when to set t=0. 0 - no change in time, 1 - set t=0 at
+%  peak of data, 2 - set t=0 to be when x data exceeds a user-supplied
+%  threshold.
 
 Fs = 1/(t(2)-t(1)); % signal sampling frequency
 
 % get starting frequencies, select them on the FFT
+ivar = 1;
 switch fmeth
     case 1
         [f, ~] = FindComponents(x, Fs);
+        tmeth = varargin{ivar};
     case 2
-        f = varargin{1};
+        f = varargin{ivar}; ivar = ivar+1;
+        tmeth = varargin{ivar}; ivar = ivar+1;
 end
 
 Noverlap = NLSprops.Nw - NLSprops.Ns;
@@ -25,8 +37,16 @@ x = x - mean(x(round(end/2):end));
 
 % start ID from maximum
 [~,maxind] = max(abs(x));
-x = x(maxind:end); t = t(maxind:end);
-% t = t(maxind:end) - t(maxind);
+switch tmeth
+    case 0
+        x = x(maxind:end); t = t(maxind:end);
+    case 1
+        x = x(maxind:end); t = t(maxind:end) - t(maxind);
+    case 2
+        xthresh = varargin{ivar};
+        ithresh = find(abs(x)>xthresh,1);
+        x = x(maxind:end); t = t(maxind:end) - t(ithresh);
+end
 
 % truncate to tend
 x0 = x; t0 = t;
