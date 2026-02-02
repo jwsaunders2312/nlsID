@@ -1,5 +1,5 @@
 function [tt, yy, resnorm, residual, elim_times, elim_freq] = ...
-    nlsID(t,x,tend)
+    nlsID(t,x,tend,fmeth,varargin)
 
 % nlsID is a time-domain nonlinear system identification code. For the full
 % description, see Constantin et al (2022) doi.org/10.3390/app12157860
@@ -8,7 +8,12 @@ function [tt, yy, resnorm, residual, elim_times, elim_freq] = ...
 Fs = 1/(t(2)-t(1)); % signal sampling frequency
 
 % get starting frequencies, select them on the FFT
-[f, ~] = FindComponents(x, Fs);
+switch fmeth
+    case 1
+        [f, ~] = FindComponents(x, Fs);
+    case 2
+        f = varargin{1};
+end
 
 Noverlap = NLSprops.Nw - NLSprops.Ns;
 
@@ -20,8 +25,8 @@ x = x - mean(x(round(end/2):end));
 
 % start ID from maximum
 [~,maxind] = max(abs(x));
-x = x(maxind:end);
-t = t(maxind:end) - t(maxind);
+x = x(maxind:end); t = t(maxind:end);
+% t = t(maxind:end) - t(maxind);
 
 % truncate to tend
 x0 = x; t0 = t;
