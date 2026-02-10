@@ -1,18 +1,15 @@
 function [tt, yy, resnorm, residual, elim_times, elim_freq] = ...
     nlsID(t,x,tend,fmeth,varargin)
-
+%%nlsID
 % nlsID is a time-domain nonlinear system identification code. For the full
 % description, see Constantin et al (2022) doi.org/10.3390/app12157860
 % Copyright (c) 2022 Lucian Constantin, lucian.constantin@bristol.ac.uk
 % Input styles:
 % [tt, yy, resnorm, residual, elim_times, elim_freq] = nlsID(t,x,tend,1,tmeth,varargin)
 % [tt, yy, resnorm, residual, elim_times, elim_freq] = nlsID(t,x,tend,2,fin,tmeth,varargin)
-% Changes V1.1:
-%  - Frequencies can now be input by the user in the initial function call
-%  rather than using the GUI.
-%  - User can select when to set t=0. 0 - no change in time, 1 - set t=0 at
-%  peak of data, 2 - set t=0 to be when x data exceeds a user-supplied
-%  threshold.
+%         / 0 - No change to time data.
+% tmeth = | 1 - t=0 set to the peak in the x data.
+%         \ 2 - t=0 set when x data first exceeds user-supplied threshold.
 
 Fs = 1/(t(2)-t(1)); % signal sampling frequency
 
@@ -93,12 +90,14 @@ tt{1} = []; yy{1} = []; resnorm{1} = []; residual{1} = [];
 stopflag1 = 1;
 elim_times = []; elim_freq = [];
 
-k1 = 0;
+k1 = 0; puse = ~isnan(p01);
+fprintf('Starting fitting.\n')
 while stopflag1
     % set current window indices
     cr1 = round(k1*(NLSprops.Nw-Noverlap)*1/f(1)*Fs+1:k1*(NLSprops.Nw-Noverlap)*1/f(1)*Fs+1 + NLSprops.Nw*1/f(1)*Fs);
     
     if cr1(end)>length(t)
+        fprintf('Finished fitting. Sum of residuals = %.2e\n',sum(resnorm{1}))
         break
     end
 
@@ -113,28 +112,30 @@ while stopflag1
     tt{1}(k1) = t(cr1(1)); 
     curt10 = curt1 - t10;
     % perform least squares fit on current window
-    [p1, resnormm, residuall] = lsqcurvefit(@exp_func,p01,curt10(:),cursig1(:),LB1,UB1,opts);
+    [p1(puse), resnormm, residuall] = lsqcurvefit(@exp_func,p01(puse),curt10(:),cursig1(:),LB1(puse),UB1(puse),opts);
 
     % verify signal component existence criteria 
     modflag = 0; % flag that signal was modified, means that fit must be done again
     for i = 0:(dimprob-1)
         if p1(i*noparam+2) > NLSprops.dampthresh
-            LB1(i*noparam+1:i*noparam+noparam) = zeros(1,noparam);
-            UB1(i*noparam+1:i*noparam+noparam) = zeros(1,noparam);
-            modflag = 1;
+            LB1(i*noparam+1:i*noparam+noparam) = NaN*zeros(1,noparam);
+            UB1(i*noparam+1:i*noparam+noparam) = NaN*zeros(1,noparam);
+            modflag = 1; puse = ~isnan(LB1); p1(~puse) = 0;
             fprintf('Component %.0f (f = %.1f Hz) eliminated at t = %.2fs\n',i+1,f(i+1),t(cr1(1)));
             elim_times = [elim_times t(cr1(1))]; elim_freq = [elim_freq f(i+1)];
         end
     end
+    if isempty(p1(puse)); warning(compose("All components were eliminated at t = %.2fs\n",t(cr1(1))));break; end
     
     % if any component was eliminated, fit again
     if modflag
-        [p1, resnormm, residuall] = lsqcurvefit(@exp_func,p01,curt10(:),cursig1(:),LB1,UB1,opts);
+        [p1(puse), resnormm, residuall] = lsqcurvefit(@exp_func,p01(puse),curt10(:),cursig1(:),LB1(puse),UB1(puse),opts);
     end
     
     % store results
     for i = 0:(dimprob-1)
         yy{i+1}(k1,:) = p1(i*noparam+1:i*noparam+noparam);
+        p1(i*noparam+1) = p1(i*noparam+1)*exp(-p1(i*noparam+2)*p1(i*noparam+3)*NLSprops.Ns/f(1));
     end
 
     resnorm{1}(k1) = resnormm;
