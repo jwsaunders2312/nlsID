@@ -21,7 +21,7 @@ switch fmeth
         tmeth = varargin{ivar};
     case 2
         f = varargin{ivar}; ivar = ivar+1;
-        tmeth = varargin{ivar}; ivar = ivar+1;
+        tmeth = varargin{ivar};
 end
 
 Noverlap = NLSprops.Nw - NLSprops.Ns;
@@ -40,7 +40,7 @@ switch tmeth
     case 1
         x = x(maxind:end); t = t(maxind:end) - t(maxind);
     case 2
-        xthresh = varargin{ivar};
+        ivar = ivar+1; xthresh = varargin{ivar};
         ithresh = find(abs(x)>xthresh,1);
         x = x(maxind:end); t = t(maxind:end) - t(ithresh);
 end
