@@ -125,7 +125,7 @@ while stopflag1
             elim_times = [elim_times t(cr1(1))]; elim_freq = [elim_freq f(i+1)];
         end
     end
-    if isempty(p1(puse)); warning(compose("All components were eliminated at t = %.2fs\n",t(cr1(1))));break; end
+    if isempty(p1(puse)), warning(compose("All components were eliminated at t = %.2fs\n",t(cr1(1)))), tt = tt{1}(1:end-1); break, end
     
     % if any component was eliminated, fit again
     if modflag
