@@ -109,7 +109,11 @@ while stopflag1
     t10 = curt1(1);
 
     % time at which signal info is collected is the mean of the current window time
-    tt{1}(k1) = t(cr1(1)); 
+    if rem(length(cr1),2) == 0
+        tt{1}(k1) = mean(t(cr1(end/2:end/2+1)));
+    else
+        tt{1}(k1) = t(cr1(ceil(end/2)));
+    end
     curt10 = curt1 - t10;
     % perform least squares fit on current window
     [p1(puse), resnormm, residuall] = lsqcurvefit(@exp_func,p01(puse),curt10(:),cursig1(:),LB1(puse),UB1(puse),opts);
@@ -134,8 +138,9 @@ while stopflag1
     
     % store results
     for i = 0:(dimprob-1)
+        p1(i*noparam+1) = p1(i*noparam+1)*exp(-p1(i*noparam+2)*p1(i*noparam+3)*NLSprops.Ns/f(1)/2);
         yy{i+1}(k1,:) = p1(i*noparam+1:i*noparam+noparam);
-        p1(i*noparam+1) = p1(i*noparam+1)*exp(-p1(i*noparam+2)*p1(i*noparam+3)*NLSprops.Ns/f(1));
+        p1(i*noparam+1) = p1(i*noparam+1)*exp(-p1(i*noparam+2)*p1(i*noparam+3)*NLSprops.Ns/f(1)/2);
     end
 
     resnorm{1}(k1) = resnormm;
